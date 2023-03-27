@@ -1,0 +1,4 @@
+name = "MyGame2048"
+uuid = "0e86556c-c04e-480e-afd1-a45291f79906"
+authors = ["Mateusz Woźny <mateusz15wozny@gmail.com>"]
+version = "0.2.0"
