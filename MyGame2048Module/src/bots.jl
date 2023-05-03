@@ -1,7 +1,7 @@
 using MyGame2048: make_move, random_move, Game, init_game, MAX_VALUE
 
-const SPM_SCALE_PARAM = 10
-const SL_SCALE_PARAM = 12
+const SPM_SCALE = 10
+const SL_SCALE = 8
 const SEARCH_PARAM = 200
 const NUMBER_OF_MOVES = 4
 const MAX_MOVES = 5000
@@ -16,8 +16,8 @@ function HeuristicBot()
 end
 
 function get_search_params(number::Int64)
-    searches_per_move = SPM_SCALE_PARAM * (1 + (number // SEARCH_PARAM))
-    search_length = SL_SCALE_PARAM * (1 + (number // SEARCH_PARAM))
+    searches_per_move = SPM_SCALE * (1 + (number // SEARCH_PARAM))
+    search_length = SL_SCALE * (1 + (number // SEARCH_PARAM))
     searches_per_move, search_length
 end
 moves = []
@@ -80,8 +80,3 @@ function play(bot::HeuristicBot)
     println("Move number: ", move_number)
     bot.game
 end
-for i in 1:5
-    bot = HeuristicBot()
-    @time println(max(play(bot).board...))
-end
-

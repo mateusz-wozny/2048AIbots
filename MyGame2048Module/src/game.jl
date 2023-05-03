@@ -1,7 +1,7 @@
-using StatsBase
+using LinearAlgebra
 # # Define the game board as a 4x4 matrix of zeros
 const MAX_VALUE = 8192
-
+const MOVES_MAPPING = Dict("l" => 0, "u" => 1, "r" => 2, "d" => 3)
 mutable struct Game
     board::Matrix{Int}
     reward::Int
@@ -11,8 +11,8 @@ Base.display(game::Game) = display(game.board)
 Base.print(game::Game) = print(game.board)
 Base.println(game::Game) = println(game.board)
 
-function init_game()::Game
-    zeros(Int, 4, 4) |> x -> Game(x, 0) |> add_tile
+function init_game(binary::Bool=false)::Game
+    zeros(Int, 4, 4) |> x -> Game(x, 0) |> x -> add_tile(x, binary)
 end
 
 # Function to print the game board
@@ -21,20 +21,25 @@ function print_board(board::Matrix{Int})
 end
 
 # Function to add a new random tile (either 2 or 4) to the board
-function add_tile(game::Game)
+function add_tile(game::Game, binary::Bool=false)
     # Find all empty positions on the board
     empty_positions = findall(x -> x == 0, game.board)
     # Choose a random empty position
     pos = empty_positions[rand(1:length(empty_positions))]
+    factor = binary ? 1 : 2
     # Choose a random value (either 2 or 4)
-    value = rand() < 0.9 ? 2 : 4
+    value = rand() < 0.9 ? 1 * factor : 2 * factor
     # Set the value at the chosen position
     game.board[pos] = value
     game
 end
 
+function add_tile(tuple::Tuple{Game,Bool})
+    add_tile(tuple[1])
+end
+
 # Function to shift tiles to the left
-function shift_left(game::Game)
+function shift_left(game::Game, binary::Bool=false)
     update = false
     old_board = deepcopy(game.board)
     for i in 1:size(game.board, 1)
@@ -43,13 +48,13 @@ function shift_left(game::Game)
         # Merge adjacent tiles with the same value
         for j in 1:length(row)-1
             if row[j] == row[j+1]
-                row[j] *= 2
+                row[j] = binary ? row[j] + 1 : row[j] * 2
                 row[j+1] = 0
-                game.reward += row[j]
+                game.reward += binary ? 2^row[j] : row[j]
                 update = true
             end
         end
-
+        row = filter(x -> x != 0, row)
         # Add zeros back to the end of the row
         row = vcat(row, zeros(Int, size(game.board, 2) - length(row)))
         # Update the board
@@ -60,28 +65,28 @@ function shift_left(game::Game)
 end
 
 # Function to shift tiles to the right
-function shift_right(game::Game)
+function shift_right(game::Game, binary::Bool=false)
     # Reverse the board, shift left, and reverse back
     reverse!(game.board, dims=2)
-    game, is_valid = shift_left(game)
+    game, is_valid = shift_left(game, binary)
     reverse!(game.board, dims=2)
     game, is_valid
 end
 
 # Function to shift tiles up
-function shift_up(game::Game)
+function shift_up(game::Game, binary::Bool=false)
     # Transpose the board, shift left, and transpose back
     game.board = transpose(game.board)
-    game, is_valid = shift_left(game)
+    game, is_valid = shift_left(game, binary)
     game.board = transpose(game.board)
     game, is_valid
 end
 
 # Function to shift tiles down
-function shift_down(game::Game)
+function shift_down(game::Game, binary::Bool=false)
     # Transpose the board, shift right, and transpose back
     game.board = transpose(game.board)
-    game, is_valid = shift_right(game)
+    game, is_valid = shift_right(game, binary)
     game.board = transpose(game.board)
     game, is_valid
 end
@@ -118,31 +123,62 @@ function play_game()
     end
 end
 function random_move(game::Game)
-    move = sample(["l", "r", "u", "d"], Weights([0.4, 0.15, 0.05, 0.4]))
+    available_moves = []
+    for move in ["l", "r", "u", "d"]
+        if is_move_available(MOVES_MAPPING[move], game.board)
+            push!(available_moves, move)
+        end
+    end
+    if available_moves == []
+        push!(available_moves, "l")
+    end
+    move = rand(available_moves)
     make_move(game, move)
 end
-function make_move(game::Game, move::String)
+
+function pre_move(game::Game, move::String, binary::Bool=false)
     move = Symbol(move)
     # Apply the move
     if move == :l
-        game, is_valid = shift_left(game)
+        game, is_valid = shift_left(game, binary)
+
+    elseif move == :r
+        game, is_valid = shift_right(game, binary)
+
+    elseif move == :u
+        game, is_valid = shift_up(game, binary)
+
+    elseif move == :d
+        game, is_valid = shift_down(game, binary)
+
+    else
+        println("Invalid move!")
+    end
+    game, is_valid
+end
+
+function make_move(game::Game, move::String, binary::Bool=false)
+    move = Symbol(move)
+    # Apply the move
+    if move == :l
+        game, is_valid = shift_left(game, binary)
         if is_valid
-            add_tile(game)
+            add_tile(game, binary)
         end
     elseif move == :r
-        game, is_valid = shift_right(game)
+        game, is_valid = shift_right(game, binary)
         if is_valid
-            add_tile(game)
+            add_tile(game, binary)
         end
     elseif move == :u
-        game, is_valid = shift_up(game)
+        game, is_valid = shift_up(game, binary)
         if is_valid
-            add_tile(game)
+            add_tile(game, binary)
         end
     elseif move == :d
-        game, is_valid = shift_down(game)
+        game, is_valid = shift_down(game, binary)
         if is_valid
-            add_tile(game)
+            add_tile(game, binary)
         end
     else
         println("Invalid move!")
@@ -150,9 +186,9 @@ function make_move(game::Game, move::String)
     game, is_valid
 end
 
-function vector(game::Game)
-    vec = zeros(Int8, 208)
-    for (i, num) in enumerate(vcat(game.board...))
+function vector(matrix::Matrix)
+    vec = zeros(208)
+    for (i, num) in enumerate(vcat(matrix...))
         if num > 0
             num = Int(log2(num))
         end
@@ -160,17 +196,24 @@ function vector(game::Game)
     end
     vec
 end
-function is_move_available(game::Game, move::String)
-    _, is_valid = make_move(game, move)
-    return is_valid
-end
-function game_over(game::Game)
-    for move in ["l", "r", "u", "d"]
-        if is_move_available(game, move)
-            return false
+
+function check_state(state::Matrix)
+    for row in 1:4
+        has_empty = false
+        for col in 1:4
+            has_empty |= state[row, col] == 0
+            if state[row, col] != 0 && has_empty
+                return true
+            end
+            if state[row, col] != 0 && col > 1 && state[row, col] == state[row, col-1]
+                return true
+            end
         end
     end
-    return true
+    return false
 end
-game = init_game()
-println(game_over(game))
+
+function is_move_available(move, state::Matrix)
+    temp_state = rotl90(state, move)
+    return check_state(temp_state)
+end

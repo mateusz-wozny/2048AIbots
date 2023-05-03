@@ -1,4 +1,7 @@
 name = "MyGame2048"
 uuid = "0e86556c-c04e-480e-afd1-a45291f79906"
 authors = ["Mateusz Woźny <mateusz15wozny@gmail.com>"]
-version = "0.2.0"
+version = "0.3.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
