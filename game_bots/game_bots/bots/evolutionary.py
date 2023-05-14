@@ -1,7 +1,6 @@
 from deap import creator, base, tools, cma
 from deap.algorithms import eaGenerateUpdate
 import numpy as np
-
 from game_bots.bots.machine_learning import TDBotsmall
 
 

@@ -52,12 +52,8 @@ function play(bot::HeuristicBot, move_number::Int64)
     end
     best_move_index = argmax(move_scores)
     best_move = possible_moves[best_move_index]
+    best_game, is_valid = make_move(old_game, best_move)
 
-    if rand() < 0.99
-        best_game, is_valid = make_move(old_game, best_move)
-    else
-        best_game, is_valid = random_move(old_game)
-    end
     best_game, is_valid
 end
 

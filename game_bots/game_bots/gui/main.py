@@ -116,6 +116,7 @@ class Game:
 
     def start(self):
         self.game = MyGame2048.init_game()
+        self.game = self._game_func(np.zeros((4, 4)), 0)
         self.board.update(self.game)
         self.board.paintGrid()
         self.board.window.bind("<Key>", self.make_move)
@@ -156,7 +157,7 @@ class Game:
         self.board.update(game)
 
         bot = TDBot()
-        bot.load_weights("weights/td_agent3.npy")
+        bot.load_weights("weights/td_agent.pickle", use_sparse=True)
         while True:
             best_value = -np.inf
             for direction in range(4):

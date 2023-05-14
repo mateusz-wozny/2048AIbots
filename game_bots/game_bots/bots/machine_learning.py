@@ -76,6 +76,10 @@ class DQNBot:
             vec = game.vector()
             with torch.no_grad():
                 Q_next = self.model(vec)
+                Q_next = [
+                    Q_next[a] if game.is_move_available(a) else float("-inf")
+                    for a in range(4)
+                ]
             batch_output.append(Q_star)
             batch_label.append(reward + gamma * max(Q_next))
 
@@ -142,6 +146,7 @@ class TDBot:
         self.init_weights()
 
     def tuples(self, board: np.ndarray) -> np.ndarray:
+        # max value 15
         x_vert = (
             (board[0, :] << 12) + (board[1, :] << 8) + (board[2, :] << 4) + board[3, :]
         ).ravel()
@@ -307,8 +312,11 @@ def run_td_bot(
     ckpt_path: str = "weights/td_agent.npy",
     save_path: str = "weights/td_agent.npy",
     use_sparse: bool = True,
+    is_small: bool = False,
 ):
-    td_agent = TDBotsmall(file_path=save_path)
+    td_agent = (
+        TDBotsmall(file_path=save_path) if is_small else TDBot(file_path=save_path)
+    )
     if resume and os.path.exists(ckpt_path):
         print("Load weights")
         td_agent.load_weights(ckpt_path, use_sparse)
@@ -321,10 +329,13 @@ def run_td_bot(
 
 if __name__ == "__main__":
     run_td_bot(
-        n_train=2000,
+        n_train=100,
         n_eval=50,
-        training=True,
-        resume=False,
-        ckpt_path="weights/td_agent.pickle",
+        training=False,
+        resume=True,
+        saving=True,
+        is_small=True,
+        use_sparse=False,
+        ckpt_path="weights/evolutionary2.npy",
         save_path="weights/tdsmall_agent.npy",
     )
