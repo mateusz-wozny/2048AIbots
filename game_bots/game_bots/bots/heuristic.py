@@ -1,6 +1,7 @@
 from copy import deepcopy
 from typing import Tuple
 from julia import MyGame2048
+import time
 
 import numpy as np
 
@@ -53,6 +54,7 @@ class HeuristicBot:
         for first_move_index in range(NUMBER_OF_MOVES):
             move = possible_first_moves[first_move_index]
             game, is_valid = self.make_move(old_board, move)
+            first_move_scores[first_move_index] += game.reward
             if not is_valid:
                 continue
             for _ in range(number_of_simulations):
@@ -77,19 +79,25 @@ class HeuristicBot:
         return searches_per_move, search_length
 
 
-import time
+def run_jl_heuristic_bot():
+    HeuristicBotJl = MyGame2048.HeuristicBot
+    play = MyGame2048.play
+    start = time.time()
+    heuristic_bot_jl = HeuristicBotJl()
 
-HeuristicBotJl = MyGame2048.HeuristicBot
-play = MyGame2048.play
-start = time.time()
-HeuristicBotJl = HeuristicBotJl()
+    print(play(heuristic_bot_jl).reward)
+    print(time.time() - start)
 
-print(play(HeuristicBotJl).board)
-print(time.time() - start)
-start = time.time()
 
-bot = HeuristicBot()
-bot.play()
+def run_py_heuristic_bot():
+    start = time.time()
 
-print(bot.game.board)
-print(time.time() - start)
+    bot = HeuristicBot()
+    bot.play()
+
+    print(bot.game.reward)
+    print(time.time() - start)
+
+
+run_jl_heuristic_bot()
+run_py_heuristic_bot()
